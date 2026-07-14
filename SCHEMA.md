@@ -7,16 +7,16 @@ recorded against a controlled list of fail codes.
 
 ```mermaid
 erDiagram
-  worker ||--o{ user_qualification : holds
+  person ||--o{ user_qualification : holds
   qualification_type ||--o{ user_qualification : classifies
   site ||--o{ site_requirement : requires
   qualification_type ||--o{ site_requirement : "required as"
   vehicle_type ||--o{ site_requirement : "scoped to"
-  worker ||--o{ access_check : checked
-  site ||--o{ access_check : "location of"
-  access_check ||--o{ access_check_fail : "fails with"
-  fail_code ||--o{ access_check_fail : categorises
-  qualification_type ||--o{ access_check_fail : "flagged for"
+  person ||--o{ access_check_log : checked
+  site ||--o{ access_check_log : "location of"
+  access_check_log ||--o{ access_check_fail_log : "fails with"
+  fail_code ||--o{ access_check_fail_log : categorises
+  qualification_type ||--o{ access_check_fail_log : "flagged for"
 
   qualification_type {
     smallint id PK
@@ -38,7 +38,7 @@ erDiagram
     text severity "amber/red"
     boolean active
   }
-  worker {
+  person {
     bigint id PK
     text full_name
     text nexus_id "unique"
@@ -52,7 +52,7 @@ erDiagram
   }
   user_qualification {
     bigint id PK
-    bigint worker_id FK
+    bigint person_id FK
     smallint qualification_type_id FK
     date valid_from
     date valid_to "nullable"
@@ -67,9 +67,9 @@ erDiagram
     smallint alternative_group "OR-group"
     boolean mandatory
   }
-  access_check {
+  access_check_log {
     bigint id PK
-    bigint worker_id FK
+    bigint person_id FK
     bigint site_id FK
     text visit_type
     text vehicle_types "array of codes"
@@ -82,9 +82,9 @@ erDiagram
     text ruleset_version
     timestamptz occurred_at
   }
-  access_check_fail {
+  access_check_fail_log {
     bigint id PK
-    bigint access_check_id FK
+    bigint access_check_log_id FK
     smallint fail_code_id FK
     smallint qualification_type_id FK "nullable"
     text detail "nullable"
@@ -100,16 +100,16 @@ erDiagram
 - `fail_code` — controlled list of failure reasons with a severity (`amber` warning / `red` fail).
 
 **Core**
-- `worker` — the person being checked.
+- `person` — the person being checked.
 - `site` — the site being controlled.
 
 **Compliance (current state)**
-- `user_qualification` — the qualifications a worker holds, with a validity window.
+- `user_qualification` — the qualifications a person holds, with a validity window.
 - `site_requirement` — what a site requires, scoped by `visit_type` / `vehicle_type`; `alternative_group` expresses OR-logic (any one in a group satisfies it); `mandatory` distinguishes red vs advisory.
 
 **Access (logs)**
-- `access_check` — one row per gate check: overall RAG `outcome`, override flag, who/how it was checked, and the `ruleset_version` in force.
-- `access_check_fail` — child rows of a check: one per failing/warning requirement, each carrying a `fail_code`.
+- `access_check_log` — one row per gate check: overall RAG `outcome`, override flag, who/how it was checked, and the `ruleset_version` in force.
+- `access_check_fail_log` — child rows of a check: one per failing/warning requirement, each carrying a `fail_code`.
 
 ## Notes
 - RAG: `red` = missing/expired mandatory qualification; `amber` = a required qualification expiring within the grace window (default 30 days); `green` = all satisfied.
